@@ -12,10 +12,11 @@ wt(webtool)脚本工具是一个快速部署管理https网站的脚本小工具
 
 ## 命令格式
 wt.sh [action] [domain]  [webroot]  [nginx-config-path]
-action: add | remove, add是添加域名和网站，remove是撤销和销毁tls证书
-domain: 是要部署的域名，一般都是子域名
-webroot：nginx 下对应的网站根目录
-nginx-config-path：nginx的conf文件的目录，我们会自动创建[domain].conf格式的conf文件，并重启nginx，使其生效
+
+- action: add | remove, add是添加域名和网站，remove是撤销和销毁tls证书
+- domain: 是要部署的域名，一般都是子域名
+- webroot：nginx 下对应的网站根目录
+- nginx-config-path：nginx的conf文件的目录，我们会自动创建[domain].conf格式的conf文件，并重启nginx，使其生效
 
 ## 注意
 1. 创建时，会生成nginx域名跟目录，tls证书和nginx conf配置文件
