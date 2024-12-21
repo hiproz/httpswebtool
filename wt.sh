@@ -17,6 +17,12 @@ if [ ! -d "~/.wt" ]; then
 fi
 
 if [ "$action" = "add" ]; then
+    echo "wt.sh [action] [domain] [webroot] [nginx-config-path]"
+    if [  $# -lt 4 ]; then
+        echo "invalid params"
+        exit 0
+    fi
+
     echo "domain:$domain, webroot:$webroot, nginx_conf_path:$nginx_conf_path"
     if [ ! -d "$webroot" ]; then
         mkdir -p $webroot
@@ -26,6 +32,7 @@ if [ "$action" = "add" ]; then
 
     if [ ! -d "$nginx_conf_path" ]; then
         echo "invalid nginx config path"
+	exit 0
     fi
 
     # 生成默认的http nginx 配置，确保 certonly模式网络能访问，当然这个前提是已经把域名的dns配置好了
@@ -44,11 +51,13 @@ if [ "$action" = "add" ]; then
     full_pem_path=$(cat ~/.wt/$domain|head -n 1)
     private_pem_path=$(sed -n '2p' ~/.wt/$domain)
     echo "letsencrypt pem path:$full_pem_path, $private_pem_path"
+    echo "certbot success!"
     ## 到这里我们已经成功获取letsencrypt的https证书了，接下来就是生成最终的nginx conf 文件
     sed "s|BBB|$domain|g; s|AAA|$webroot|g; s|CCC|$full_pem_path|g; s|DDD|$private_pem_path|g" default-https.conf > $domain.conf
 
     mv $domain.conf $nginx_conf_path
     nginx -s reload 
+    echo "nginx reload success!"
 elif [ "$action" = "remove"  ]; then
     pem_path=$(cat ~/.wt/$domain|head -n 1)
     echo "letsencrypt pem path :$pem_path"
