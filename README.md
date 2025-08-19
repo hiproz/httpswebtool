@@ -11,13 +11,13 @@ wt(webtool)脚本工具是一个基于certbot快速部署管理https网站的脚
 4. 用的是root，没有权限问题
 
 ## 命令格式
-wt.sh [action] [domain]  [webroot]  [nginx-config-path]
+wt.sh [action] [domain]  [webroot]  [nginx-config-path] [email-of-letsencrypt-reg]
 
 - action: add | remove, add是添加域名和网站，remove是撤销和销毁tls证书
 - domain: 是要部署的域名，一般都是子域名
 - webroot：nginx 下对应的网站根目录
 - nginx-config-path：nginx的conf文件的目录，我们会自动创建[domain].conf格式的conf文件，并重启nginx，使其生效
+- email-of-letsencrypt-reg：申请 letsencrypt 证书时填写的邮箱
 
 ## 注意
-1. 创建时，会生成nginx域名根目录，tls证书和nginx conf配置文件
-2. 删除时，只是撤销和删除了证书，但是nginx根目录和配置不动，请根据需要进一步手动删除
+1. letsencrypt 证书申请有频率限制，如果高频测试时，谨防被限流

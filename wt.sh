@@ -18,7 +18,7 @@ if [ ! -d "~/.wt" ]; then
 fi
 
 if [ "$action" = "add" ]; then
-    echo "wt.sh [action] [domain] [webroot] [nginx-config-path]"
+    echo "wt.sh [action] [domain] [webroot] [nginx-config-path] [email in letsencrypt]"
     if [  $# -lt 5 ]; then
         echo "invalid params"
         exit 0
@@ -43,19 +43,43 @@ if [ "$action" = "add" ]; then
 
     mv $domain.conf $nginx_conf_path
     nginx -s reload 
+    echo "after reload the nginx,please test the http://$domain"
+    
+    #check the httpwebsite
+    URL="http://$domain"
 
-    ## 开始生成https证书
+    # 使用curl获取HTTP响应码
+    response_code=$(curl -o /dev/null -s -w "%{http_code}\n" "$URL")
+    
+    # 检查响应码是否为200
+    if [ "$response_code" -eq 200 ]; then
+        echo "Website is reachable and returns HTTP 200"
+        # 在这里可以继续执行其他命令
+    else
+        echo "Please check the web service, the web site isn't reachable"
+        echo "Received HTTP code: $response_code"
+        exit 1
+    fi
+    
+    # 解决重复执行的场景，每次先强制清除证书
+    find /etc/letsencrypt  -name "*$domain*" -print0 | xargs -0 -I {} sh -c 'echo "Removing: {}"; rm -rf "{}"'
+
+    # 开始生成https证书
     # 执行certbot命令
     certbot certonly --non-interactive  --agree-tos --email $email --webroot -w $webroot -d $domain |grep .pem > ~/.wt/$domain
 
+    # ~/.wt/$domain 的内容参考：
+    #Certificate is saved at: /etc/letsencrypt/live/xxx.com/fullchain.pem
+    #Key is saved at:         /etc/letsencrypt/live/xxx.com/privkey.pem
+    
+    #我们要提取冒号后面的内容
     ## 分别获取fullchain.pem 和 privkey.pem
-    full_pem_path=$(cat ~/.wt/$domain|head -n 1)
-    private_pem_path=$(sed -n '2p' ~/.wt/$domain)
-    echo "letsencrypt pem path:$full_pem_path, $private_pem_path"
+    full_pem_path=$(head -1 ~/.wt/$domain|awk -F':[[:space:]]+' '{print $2}')
+    private_pem_path=$(tail -1 ~/.wt/$domain|awk -F':[[:space:]]+' '{print $2}')
+    echo "letsencrypt full pem path:$full_pem_path"
+    echo "letsencrypt private pem path:$private_pem_path"
     echo "certbot success!"
     
-    # todo 这里有bug，在替换的路径前面有额外多余的内容，待修复  20250526
-    #
     ## 到这里我们已经成功获取letsencrypt的https证书了，接下来就是生成最终的nginx conf 文件
     sed "s|BBB|$domain|g; s|AAA|$webroot|g; s|CCC|$full_pem_path|g; s|DDD|$private_pem_path|g" default-https.conf > $domain.conf
 
@@ -63,11 +87,13 @@ if [ "$action" = "add" ]; then
     nginx -s reload 
     echo "nginx reload success!"
 elif [ "$action" = "remove"  ]; then
-    pem_path=$(cat ~/.wt/$domain|head -n 1)
-    echo "letsencrypt pem path :$pem_path"
-    yes Y | certbot revoke --non-interactive  --agree-tos --email $email --force-interactive --cert-path $pem_path
+    cat ~/.wt/$domain
+    find /etc/letsencrypt  -name "*$domain*" -print0 | xargs -0 -I {} sh -c 'echo "Removing: {}"; rm -rf "{}"'
     rm -f ~/.wt/$domain
-    nginx -s reload 
+    timestamp=$(date +"%y%m%d%H%M%S")
+    mv "$nginx_conf_path/$domain.conf" "$nginx_conf_path/$domain.conf-$timestamp.bak"
+    nginx -s reload
+    echo "remove finish!"
 else
     echo "please input invalid params!"
     echo "eg:"
